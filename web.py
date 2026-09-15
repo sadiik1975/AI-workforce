@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from workforce.app import WorkforceApp
+from telegram_bot import run_bot
 
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
@@ -130,6 +131,7 @@ class WorkforceHandler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     host = "0.0.0.0"
     port = int(os.getenv("PORT", "8000"))
+    threading.Thread(target=run_bot, name="telegram-bot", daemon=True).start()
     server = ThreadingHTTPServer((host, port), WorkforceHandler)
     print(f"Been Ventures workforce listening on port {port}")
     try:

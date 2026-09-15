@@ -11,6 +11,7 @@ def get_config() -> dict[str, str]:
     config = {
         "search_api_key": "",
         "email_api_key": "",
+        "telegram_bot_token": "",
         "database_url": "sqlite:///data/tasks.db",
         "debug": False,
     }
@@ -18,6 +19,7 @@ def get_config() -> dict[str, str]:
     env_key_map = {
         "SEARCH_API_KEY": "search_api_key",
         "EMAIL_API_KEY": "email_api_key",
+        "TELEGRAM_BOT_TOKEN": "telegram_bot_token",
         "DATABASE_URL": "database_url",
         "DEBUG": "debug",
     }
@@ -30,7 +32,7 @@ def get_config() -> dict[str, str]:
             key = key.strip()
             value = value.strip().strip('"').strip("'")
             config_key = env_key_map.get(key, key)
-            if config_key in {"search_api_key", "email_api_key", "database_url"}:
+            if config_key in {"search_api_key", "email_api_key", "telegram_bot_token", "database_url"}:
                 config[config_key] = value
             elif config_key == "debug":
                 config[config_key] = value.lower() == "true"
@@ -38,6 +40,7 @@ def get_config() -> dict[str, str]:
     environment_values = {
         "search_api_key": os.getenv("SEARCH_API_KEY"),
         "email_api_key": os.getenv("EMAIL_API_KEY"),
+        "telegram_bot_token": os.getenv("TELEGRAM_BOT_TOKEN"),
         "database_url": os.getenv("DATABASE_URL"),
         "debug": os.getenv("DEBUG"),
     }
