@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -127,8 +128,10 @@ class WorkforceHandler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    server = ThreadingHTTPServer(("127.0.0.1", 8000), WorkforceHandler)
-    print("Been Ventures workforce: http://127.0.0.1:8000")
+    host = "0.0.0.0"
+    port = int(os.getenv("PORT", "8000"))
+    server = ThreadingHTTPServer((host, port), WorkforceHandler)
+    print(f"Been Ventures workforce listening on port {port}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

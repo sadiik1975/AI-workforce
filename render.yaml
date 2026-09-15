@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: been-ventures-workforce
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python web.py
+    healthCheckPath: /api/health
+    envVars:
+      - key: SEARCH_API_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: DEBUG
+        value: "false"
