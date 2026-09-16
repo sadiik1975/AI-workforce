@@ -5,7 +5,7 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    .workforce-mascot { display:inline-flex; position:relative; align-items:center; justify-content:center; width:24px; height:24px; margin-left:4px; margin-right:8px; border:1px solid rgba(128,170,84,.35); border-radius:50%; color:#1e3027; background:#cdf36d; font-size:13px; line-height:1; vertical-align:middle; box-shadow:0 3px 9px rgba(81,118,42,.14); }
+    .workforce-mascot { display:inline-flex; position:relative; align-items:center; justify-content:center; width:24px; height:24px; margin-left:4px; margin-right:8px; color:inherit; background:transparent; font-size:13px; line-height:1; vertical-align:middle; }
     .workforce-mascot .mascot-face { display:block; transform-origin:center bottom; font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif; animation:mascot-breathe 2.8s ease-in-out infinite; }
     .workforce-mascot .mascot-z { position:absolute; top:-13px; right:-7px; color:#a8d84e; font:800 10px DM Mono,monospace; opacity:0; }
     .workforce-mascot .mascot-z.z-two { top:-20px; right:-1px; font-size:8px; }
