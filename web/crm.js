@@ -5,8 +5,8 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    .workforce-mascot { display:inline-flex; position:relative; align-items:center; justify-content:center; width:32px; height:32px; margin-left:8px; border:1px solid rgba(128,170,84,.35); border-radius:50%; color:#1e3027; background:#cdf36d; font-size:18px; line-height:1; vertical-align:middle; box-shadow:0 5px 14px rgba(81,118,42,.16); }
-    .workforce-mascot .mascot-face { display:block; transform-origin:center bottom; animation:mascot-breathe 2.8s ease-in-out infinite; }
+    .workforce-mascot { display:inline-flex; position:relative; align-items:center; justify-content:center; width:24px; height:24px; margin-left:4px; margin-right:8px; border:1px solid rgba(128,170,84,.35); border-radius:50%; color:#1e3027; background:#cdf36d; font-size:13px; line-height:1; vertical-align:middle; box-shadow:0 3px 9px rgba(81,118,42,.14); }
+    .workforce-mascot .mascot-face { display:block; transform-origin:center bottom; font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif; animation:mascot-breathe 2.8s ease-in-out infinite; }
     .workforce-mascot .mascot-z { position:absolute; top:-13px; right:-7px; color:#a8d84e; font:800 10px DM Mono,monospace; opacity:0; }
     .workforce-mascot .mascot-z.z-two { top:-20px; right:-1px; font-size:8px; }
     .workforce-mascot .mascot-z.z-three { top:-25px; right:7px; font-size:7px; }
@@ -43,8 +43,13 @@
     mascot.className = 'workforce-mascot';
     mascot.setAttribute('role', 'img');
     mascot.setAttribute('aria-label', 'Workforce mood character');
-    mascot.innerHTML = '<span class="mascot-face">◡</span><span class="mascot-z">Z</span><span class="mascot-z z-two">Z</span><span class="mascot-z z-three">Z</span>';
+    mascot.innerHTML = '<span class="mascot-face">🙂</span><span class="mascot-z">Z</span><span class="mascot-z z-two">Z</span><span class="mascot-z z-three">Z</span>';
     mobileMenu.insertAdjacentElement('afterend', mascot);
+    const updateMascotMood = () => {
+      mascot.querySelector('.mascot-face').textContent = document.body.classList.contains('dark') ? '😴' : '🙂';
+    };
+    updateMascotMood();
+    new MutationObserver(updateMascotMood).observe(document.body, { attributes: true, attributeFilter: ['class'] });
   }
 
   const navButton = document.createElement('button');
