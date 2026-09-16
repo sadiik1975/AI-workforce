@@ -13,7 +13,7 @@ from workforce.app import WorkforceApp
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Been Ventures AI Workforce")
-    parser.add_argument("command", nargs="?", default="status", help="status, tasks, task, agents, logs, approvals, approve, reject, stop, chat")
+    parser.add_argument("command", nargs="?", default="status", help="status, tasks, task, agents, logs, approvals, crm, approve, reject, stop, chat")
     parser.add_argument("value", nargs="*", help="task text or task id")
     return parser
 
@@ -49,6 +49,25 @@ def main() -> int:
         for task in tasks:
             print(format_task(task))
             print("-" * 60)
+        return 0
+
+    if command == "crm":
+        if args.value and args.value[0].lower() == "add":
+            if len(args.value) < 3:
+                print('Usage: python3 run.py crm add company "Company name"')
+                return 1
+            record_type = args.value[1].lower()
+            company = " ".join(args.value[2:])
+            record = app.add_crm_record(company, record_type=record_type)
+            print(json.dumps(record, indent=2, default=str))
+            return 0
+        records = app.list_crm_records()
+        if not records:
+            print("No CRM records found.")
+            print('Add one with: python3 run.py crm add company "Company name"')
+            return 0
+        for record in records:
+            print(f"{record['record_id']} | {record['record_type']} | {record['company']} | {record['sales_stage']}")
         return 0
 
     if command == "task":

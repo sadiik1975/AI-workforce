@@ -14,6 +14,7 @@ from agents.sales import SalesAgent
 from workforce.registry import AgentRegistry
 from workforce.logger import WorkforceLogger
 from workforce.task_store import TaskStore
+from workforce.crm_store import CRMStore
 
 
 class WorkforceApp:
@@ -27,6 +28,7 @@ class WorkforceApp:
         self.registry = AgentRegistry()
         self.logger = WorkforceLogger(self.logs_dir)
         self.store = TaskStore(self.data_dir / "tasks.db")
+        self.crm = CRMStore(self.data_dir / "tasks.db")
         self._agent_classes = {
             "business_manager": BusinessManagerAgent,
             "funding": FundingAgent,
@@ -65,6 +67,14 @@ class WorkforceApp:
 
     def list_tasks(self) -> List[Dict[str, Any]]:
         return self.store.list_tasks()
+
+    def add_crm_record(self, company: str, **fields: Any) -> Dict[str, Any]:
+        record = self.crm.add_record(company, **fields)
+        self.logger.log("crm_record_created", f"record={record['record_id']} company={record['company']}")
+        return record
+
+    def list_crm_records(self) -> List[Dict[str, Any]]:
+        return self.crm.list_records()
 
     def update_task_status(self, task_id: str, status: str, result: str | None = None, error: str | None = None, approval_required: int | None = None):
         self.store.update_status(task_id, status, result=result, error=error, approval_required=approval_required)

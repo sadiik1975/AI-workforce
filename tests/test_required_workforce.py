@@ -72,6 +72,12 @@ class RequiredWorkforceTests(unittest.TestCase):
             result = subprocess.run(command, cwd=str(root), capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, msg=f"Command failed: {' '.join(command)}\n{result.stderr}")
 
+    def test_crm_records_persist(self):
+        record = self.app.add_crm_record("Example HVAC", record_type="prospect", industry="HVAC")
+        self.assertEqual(record["company"], "Example HVAC")
+        records = self.app.list_crm_records()
+        self.assertEqual(records[0]["record_id"], record["record_id"])
+
 
 if __name__ == "__main__":
     unittest.main()

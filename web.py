@@ -34,6 +34,7 @@ def dashboard_payload() -> dict:
     return {
         "agents": app.registry.list_agents(),
         "tasks": tasks,
+        "crm": app.list_crm_records(),
         "approvals": [task for task in tasks if task["status"] in {"waiting_approval", "awaiting_approval"}],
         "activity": app.read_logs().splitlines()[-30:],
     }
@@ -56,6 +57,9 @@ class WorkforceHandler(BaseHTTPRequestHandler):
         if path == "/api/bootstrap":
             self._send_json(dashboard_payload())
             return
+        if path == "/api/crm":
+            self._send_json({"records": app_instance().list_crm_records()})
+            return
         if path.startswith("/api/tasks/"):
             task_id = path.removeprefix("/api/tasks/")
             try:
@@ -77,6 +81,9 @@ class WorkforceHandler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/api/search":
             self._handle_task()
+            return
+        if path == "/api/crm":
+            self._handle_crm_record()
             return
         if path.startswith("/api/tasks/") and path.endswith("/approve"):
             self._handle_approval(path, approve=True)
@@ -109,6 +116,24 @@ class WorkforceHandler(BaseHTTPRequestHandler):
             self._send_json({"status": "running", "task_id": task_id, "agent": agent})
         except (ValueError, json.JSONDecodeError) as exc:
             self._send_json({"status": "failed", "error": f"Invalid request: {exc}"}, 400)
+        except Exception as exc:
+            self._send_json({"status": "failed", "error": str(exc)}, 500)
+
+    def _handle_crm_record(self) -> None:
+        try:
+            payload = self._read_payload()
+            record = app_instance().add_crm_record(
+                payload.get("company", ""),
+                record_type=str(payload.get("record_type", "company")),
+                contact_name=payload.get("contact_name"),
+                website=payload.get("website"),
+                industry=payload.get("industry"),
+                location=payload.get("location"),
+                notes=payload.get("notes"),
+            )
+            self._send_json({"status": "created", "record": record}, 201)
+        except (ValueError, json.JSONDecodeError) as exc:
+            self._send_json({"status": "failed", "error": str(exc)}, 400)
         except Exception as exc:
             self._send_json({"status": "failed", "error": str(exc)}, 500)
 
