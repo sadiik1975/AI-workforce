@@ -160,29 +160,36 @@
     const editButton = event.target.closest('[data-crm-edit]');
     const deleteButton = event.target.closest('[data-crm-delete]');
     if (!editButton && !deleteButton) return;
-    const recordId = (editButton || deleteButton).dataset.crmEdit || deleteButton.dataset.crmDelete;
-    const record = (await fetch(`/api/crm/${encodeURIComponent(recordId)}`, { cache: 'no-store' })).json();
-    const payload = await record;
-    if (deleteButton) {
-      if (!window.confirm(`Delete ${payload.record.company}? This cannot be undone.`)) return;
-      const response = await fetch(`/api/crm/${encodeURIComponent(recordId)}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('CRM record could not be deleted.');
+    try {
+      const recordId = (editButton || deleteButton).dataset.crmEdit || deleteButton.dataset.crmDelete;
+      const response = await fetch(`/api/crm/${encodeURIComponent(recordId)}`, { cache: 'no-store' });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'CRM record could not be loaded.');
+      if (deleteButton) {
+        if (!window.confirm(`Delete ${payload.record.company}? This cannot be undone.`)) return;
+        const deleteResponse = await fetch(`/api/crm/${encodeURIComponent(recordId)}`, { method: 'DELETE' });
+        const deletePayload = await deleteResponse.json();
+        if (!deleteResponse.ok) throw new Error(deletePayload.error || 'CRM record could not be deleted.');
+        await load();
+        return;
+      }
+      const company = window.prompt('Company name', payload.record.company);
+      if (company === null) return;
+      const industry = window.prompt('Industry', payload.record.industry || '');
+      if (industry === null) return;
+      const phone = window.prompt('Public phone', payload.record.phone || '');
+      if (phone === null) return;
+      const updateResponse = await fetch(`/api/crm/${encodeURIComponent(recordId)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company, industry, phone })
+      });
+      const updatePayload = await updateResponse.json();
+      if (!updateResponse.ok) throw new Error(updatePayload.error || 'CRM record could not be updated.');
       await load();
-      return;
+    } catch (error) {
+      recordsNode.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
     }
-    const company = window.prompt('Company name', payload.record.company);
-    if (company === null) return;
-    const industry = window.prompt('Industry', payload.record.industry || '');
-    if (industry === null) return;
-    const phone = window.prompt('Public phone', payload.record.phone || '');
-    if (phone === null) return;
-    const response = await fetch(`/api/crm/${encodeURIComponent(recordId)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ company, industry, phone })
-    });
-    if (!response.ok) throw new Error('CRM record could not be updated.');
-    await load();
   });
 
   load().catch((error) => {

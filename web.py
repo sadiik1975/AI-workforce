@@ -78,6 +78,7 @@ class WorkforceHandler(BaseHTTPRequestHandler):
             body = (WEB_ROOT / "crm.js").read_bytes()
             self.send_response(200)
             self.send_header("Content-Type", "application/javascript; charset=utf-8")
+            self.send_header("Cache-Control", "no-store, max-age=0")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
