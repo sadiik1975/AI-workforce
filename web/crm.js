@@ -5,6 +5,19 @@
 
   const style = document.createElement('style');
   style.textContent = `
+    .workforce-mascot { display:inline-flex; position:relative; align-items:center; justify-content:center; width:32px; height:32px; margin-left:8px; border:1px solid rgba(128,170,84,.35); border-radius:50%; color:#1e3027; background:#cdf36d; font-size:18px; line-height:1; vertical-align:middle; box-shadow:0 5px 14px rgba(81,118,42,.16); }
+    .workforce-mascot .mascot-face { display:block; transform-origin:center bottom; animation:mascot-breathe 2.8s ease-in-out infinite; }
+    .workforce-mascot .mascot-z { position:absolute; top:-13px; right:-7px; color:#a8d84e; font:800 10px DM Mono,monospace; opacity:0; }
+    .workforce-mascot .mascot-z.z-two { top:-20px; right:-1px; font-size:8px; }
+    .workforce-mascot .mascot-z.z-three { top:-25px; right:7px; font-size:7px; }
+    body.dark .workforce-mascot .mascot-face { animation:mascot-sleep 3.2s ease-in-out infinite; }
+    body.dark .workforce-mascot .mascot-z { animation:mascot-snore 2.4s ease-out infinite; }
+    body.dark .workforce-mascot .mascot-z.z-two { animation-delay:.55s; }
+    body.dark .workforce-mascot .mascot-z.z-three { animation-delay:1.1s; }
+    @keyframes mascot-breathe { 50% { transform:translateY(-2px) rotate(-4deg); } }
+    @keyframes mascot-sleep { 50% { transform:translateY(2px) scaleY(.94) rotate(4deg); } }
+    @keyframes mascot-snore { 0% { opacity:0; transform:translate(2px,5px) scale(.7); } 35%,70% { opacity:1; } 100% { opacity:0; transform:translate(10px,-10px) scale(1.15); } }
+    @media (prefers-reduced-motion:reduce) { .workforce-mascot .mascot-face,.workforce-mascot .mascot-z { animation:none; } body.dark .workforce-mascot .mascot-z { opacity:1; } }
     .crm-form { display:grid; grid-template-columns:1.4fr 1fr 1.2fr auto; gap:10px; padding:18px; }
     .crm-form input,.crm-form select { min-width:0; padding:11px 12px; border:1px solid var(--line); border-radius:9px; color:var(--ink); background:var(--surface); outline:0; font-size:12px; }
     .crm-form input:focus,.crm-form select:focus { border-color:#8eb879; box-shadow:0 0 0 3px rgba(142,184,121,.18); }
@@ -23,6 +36,16 @@
   const nav = document.querySelector('.nav[aria-label="Primary navigation"]');
   const content = document.querySelector('main.content');
   if (!nav || !content || document.querySelector('[data-view="crm"]')) return;
+
+  const mobileMenu = document.querySelector('#mobile-menu');
+  if (mobileMenu && !document.querySelector('.workforce-mascot')) {
+    const mascot = document.createElement('span');
+    mascot.className = 'workforce-mascot';
+    mascot.setAttribute('role', 'img');
+    mascot.setAttribute('aria-label', 'Workforce mood character');
+    mascot.innerHTML = '<span class="mascot-face">◡</span><span class="mascot-z">Z</span><span class="mascot-z z-two">Z</span><span class="mascot-z z-three">Z</span>';
+    mobileMenu.insertAdjacentElement('afterend', mascot);
+  }
 
   const navButton = document.createElement('button');
   navButton.type = 'button';
