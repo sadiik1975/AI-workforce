@@ -84,6 +84,16 @@
   const recordsNode = view.querySelector('#crm-records');
   const countNode = view.querySelector('#crm-count');
   const fileRecordNode = view.querySelector('#crm-file-record');
+  const readResponse = async (response) => {
+    const body = await response.text();
+    let payload;
+    try {
+      payload = JSON.parse(body);
+    } catch {
+      throw new Error(`CRM API returned HTTP ${response.status}. Redeploy the latest backend on Render.`);
+    }
+    return payload;
+  };
   const render = (records) => {
     countNode.textContent = `${records.length} record${records.length === 1 ? '' : 's'}`;
     fileRecordNode.innerHTML = '<option value="">Choose a CRM record</option>' + records.map((record) => `<option value="${escapeHtml(record.record_id)}">${escapeHtml(record.company)}</option>`).join('');
@@ -100,7 +110,7 @@
   const load = async () => {
     recordsNode.innerHTML = '<div class="empty">Loading CRM records...</div>';
     const response = await fetch('/api/crm', { cache: 'no-store' });
-    const payload = await response.json();
+    const payload = await readResponse(response);
     if (!response.ok) throw new Error(payload.error || 'CRM API failed to load.');
     render(payload.records || []);
   };
@@ -116,7 +126,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(Object.fromEntries(new FormData(form)))
       });
-      const payload = await response.json();
+      const payload = await readResponse(response);
       if (!response.ok) throw new Error(payload.error || 'CRM record could not be saved.');
       form.reset();
       await load();
@@ -163,12 +173,12 @@
     try {
       const recordId = (editButton || deleteButton).dataset.crmEdit || deleteButton.dataset.crmDelete;
       const response = await fetch(`/api/crm/${encodeURIComponent(recordId)}`, { cache: 'no-store' });
-      const payload = await response.json();
+      const payload = await readResponse(response);
       if (!response.ok) throw new Error(payload.error || 'CRM record could not be loaded.');
       if (deleteButton) {
         if (!window.confirm(`Delete ${payload.record.company}? This cannot be undone.`)) return;
         const deleteResponse = await fetch(`/api/crm/${encodeURIComponent(recordId)}`, { method: 'DELETE' });
-        const deletePayload = await deleteResponse.json();
+        const deletePayload = await readResponse(deleteResponse);
         if (!deleteResponse.ok) throw new Error(deletePayload.error || 'CRM record could not be deleted.');
         await load();
         return;
@@ -184,7 +194,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ company, industry, phone })
       });
-      const updatePayload = await updateResponse.json();
+      const updatePayload = await readResponse(updateResponse);
       if (!updateResponse.ok) throw new Error(updatePayload.error || 'CRM record could not be updated.');
       await load();
     } catch (error) {
