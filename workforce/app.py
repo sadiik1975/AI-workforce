@@ -15,6 +15,7 @@ from workforce.registry import AgentRegistry
 from workforce.logger import WorkforceLogger
 from workforce.task_store import TaskStore
 from workforce.crm_store import CRMStore
+from workforce.file_store import CRMFileStore
 
 
 class WorkforceApp:
@@ -29,6 +30,7 @@ class WorkforceApp:
         self.logger = WorkforceLogger(self.logs_dir)
         self.store = TaskStore(self.data_dir / "tasks.db")
         self.crm = CRMStore(self.data_dir / "tasks.db")
+        self.crm_files = CRMFileStore(self.data_dir / "tasks.db", self.data_dir / "crm_files")
         self._agent_classes = {
             "business_manager": BusinessManagerAgent,
             "funding": FundingAgent,
@@ -75,6 +77,31 @@ class WorkforceApp:
 
     def list_crm_records(self) -> List[Dict[str, Any]]:
         return self.crm.list_records()
+
+    def update_crm_record(self, record_id: str, **fields: Any) -> Dict[str, Any]:
+        record = self.crm.update_record(record_id, **fields)
+        self.logger.log("crm_record_updated", f"record={record_id}")
+        return record
+
+    def delete_crm_record(self, record_id: str) -> None:
+        self.crm.delete_record(record_id)
+        self.logger.log("crm_record_deleted", f"record={record_id}")
+
+    def attach_crm_file(self, record_id: str, filename: str, content: bytes) -> Dict[str, Any]:
+        self.crm.get_record(record_id)
+        file_record = self.crm_files.save_bytes(record_id, filename, content)
+        self.logger.log("crm_file_uploaded", f"file={file_record['file_id']} record={record_id}")
+        return file_record
+
+    def attach_crm_file_base64(self, record_id: str, filename: str, encoded: str) -> Dict[str, Any]:
+        self.crm.get_record(record_id)
+        file_record = self.crm_files.save_base64(record_id, filename, encoded)
+        self.logger.log("crm_file_uploaded", f"file={file_record['file_id']} record={record_id}")
+        return file_record
+
+    def list_crm_files(self, record_id: str) -> List[Dict[str, Any]]:
+        self.crm.get_record(record_id)
+        return self.crm_files.list_files(record_id)
 
     def update_task_status(self, task_id: str, status: str, result: str | None = None, error: str | None = None, approval_required: int | None = None):
         self.store.update_status(task_id, status, result=result, error=error, approval_required=approval_required)

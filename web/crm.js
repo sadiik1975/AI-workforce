@@ -9,10 +9,13 @@
     .crm-form input,.crm-form select { min-width:0; padding:11px 12px; border:1px solid var(--line); border-radius:9px; color:var(--ink); background:var(--surface); outline:0; font-size:12px; }
     .crm-form input:focus,.crm-form select:focus { border-color:#8eb879; box-shadow:0 0 0 3px rgba(142,184,121,.18); }
     .crm-table { overflow:auto; }
-    .crm-row { display:grid; grid-template-columns:1.5fr .8fr 1fr 1fr 1fr; min-width:680px; gap:14px; align-items:center; padding:14px 18px; border-bottom:1px solid var(--line); }
+    .crm-row { display:grid; grid-template-columns:1.5fr .8fr 1fr 1fr 1fr auto; min-width:780px; gap:14px; align-items:center; padding:14px 18px; border-bottom:1px solid var(--line); }
     .crm-row:last-child { border-bottom:0; }
     .crm-row.header { color:var(--muted); font:500 10px DM Mono,monospace; text-transform:uppercase; }
     .crm-company { font-size:12px; font-weight:800; }
+    .crm-actions { display:flex; gap:6px; }
+    .crm-action { padding:6px 8px; border-radius:6px; color:var(--deep); background:var(--soft); font-size:10px; font-weight:800; }
+    .crm-action.delete { color:#9b4c3c; background:#fce5de; }
     @media (max-width:760px) { .crm-form { grid-template-columns:1fr; } }
   `;
   document.head.appendChild(style);
@@ -36,24 +39,33 @@
       <input name="company" placeholder="Company name" required>
       <select name="record_type" aria-label="Record type"><option value="company">Company</option><option value="prospect">Prospect</option><option value="lead">Lead</option><option value="client">Client</option></select>
       <input name="industry" placeholder="Industry (optional)">
+      <input name="phone" placeholder="Public phone (optional)">
+      <input name="email" type="email" placeholder="Public email (optional)">
       <button class="primary" type="submit">Add record</button>
     </form>
     <div class="section-head"><h2>Records</h2><span class="date" id="crm-count"></span></div>
+    <form class="panel crm-form" id="crm-file-form">
+      <select name="record_id" id="crm-file-record" required><option value="">Choose a CRM record</option></select>
+      <input name="file" type="file" accept=".csv,.tsv,.xlsx,.xls,.ods,.pdf,.doc,.docx,.txt,.md,.json,.xml,.html,.png,.jpg,.jpeg,.webp" required>
+      <button class="primary" type="submit">Upload file</button>
+    </form>
     <div class="panel crm-table" id="crm-records"><div class="empty">Loading CRM records...</div></div>
   `;
   content.appendChild(view);
 
   const recordsNode = view.querySelector('#crm-records');
   const countNode = view.querySelector('#crm-count');
+  const fileRecordNode = view.querySelector('#crm-file-record');
   const render = (records) => {
     countNode.textContent = `${records.length} record${records.length === 1 ? '' : 's'}`;
+    fileRecordNode.innerHTML = '<option value="">Choose a CRM record</option>' + records.map((record) => `<option value="${escapeHtml(record.record_id)}">${escapeHtml(record.company)}</option>`).join('');
     if (!records.length) {
       recordsNode.innerHTML = '<div class="empty">No CRM records yet. Add a company, prospect, lead, or client above.</div>';
       return;
     }
     recordsNode.innerHTML = `
-      <div class="crm-row header"><span>Company</span><span>Type</span><span>Industry</span><span>Stage</span><span>Created</span></div>
-      ${records.map((record) => `<div class="crm-row"><span class="crm-company">${escapeHtml(record.company)}</span><span>${escapeHtml(record.record_type)}</span><span>${escapeHtml(record.industry || '—')}</span><span>${escapeHtml(record.sales_stage)}</span><span class="task-meta">${escapeHtml(record.created_at)}</span></div>`).join('')}
+      <div class="crm-row header"><span>Company</span><span>Type</span><span>Contact</span><span>Phone</span><span>Status / source</span><span>Actions</span></div>
+      ${records.map((record) => `<div class="crm-row"><span class="crm-company">${escapeHtml(record.company)}</span><span>${escapeHtml(record.record_type)}</span><span>${escapeHtml(record.contact_name || record.email || '—')}</span><span>${escapeHtml(record.phone || 'Not verified')}</span><span><div>${escapeHtml(record.status)}</div><div class="task-meta">${escapeHtml(record.source || 'Unknown source')}</div></span><span class="crm-actions"><button class="crm-action" data-crm-edit="${escapeHtml(record.record_id)}">Edit</button><button class="crm-action delete" data-crm-delete="${escapeHtml(record.record_id)}">Delete</button></span></div>`).join('')}
     `;
   };
 
@@ -85,6 +97,64 @@
     } finally {
       button.disabled = false;
     }
+  });
+
+  view.querySelector('#crm-file-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const file = form.elements.file.files[0];
+    if (!file) return;
+    const button = form.querySelector('button');
+    button.disabled = true;
+    try {
+      const contentBase64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+        reader.onerror = () => reject(new Error('Could not read the selected file.'));
+        reader.readAsDataURL(file);
+      });
+      const response = await fetch(`/api/crm/${encodeURIComponent(form.elements.record_id.value)}/files`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, content_base64: contentBase64 })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'File upload failed.');
+      form.reset();
+      await load();
+    } catch (error) {
+      recordsNode.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  view.addEventListener('click', async (event) => {
+    const editButton = event.target.closest('[data-crm-edit]');
+    const deleteButton = event.target.closest('[data-crm-delete]');
+    if (!editButton && !deleteButton) return;
+    const recordId = (editButton || deleteButton).dataset.crmEdit || deleteButton.dataset.crmDelete;
+    const record = (await fetch(`/api/crm/${encodeURIComponent(recordId)}`, { cache: 'no-store' })).json();
+    const payload = await record;
+    if (deleteButton) {
+      if (!window.confirm(`Delete ${payload.record.company}? This cannot be undone.`)) return;
+      const response = await fetch(`/api/crm/${encodeURIComponent(recordId)}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('CRM record could not be deleted.');
+      await load();
+      return;
+    }
+    const company = window.prompt('Company name', payload.record.company);
+    if (company === null) return;
+    const industry = window.prompt('Industry', payload.record.industry || '');
+    if (industry === null) return;
+    const phone = window.prompt('Public phone', payload.record.phone || '');
+    if (phone === null) return;
+    const response = await fetch(`/api/crm/${encodeURIComponent(recordId)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ company, industry, phone })
+    });
+    if (!response.ok) throw new Error('CRM record could not be updated.');
+    await load();
   });
 
   load().catch((error) => {

@@ -15,6 +15,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Been Ventures AI Workforce")
     parser.add_argument("command", nargs="?", default="status", help="status, tasks, task, agents, logs, approvals, crm, approve, reject, stop, chat")
     parser.add_argument("value", nargs="*", help="task text or task id")
+    parser.add_argument("--phone", help="public CRM phone number")
+    parser.add_argument("--email", help="public CRM email address")
     return parser
 
 
@@ -52,13 +54,31 @@ def main() -> int:
         return 0
 
     if command == "crm":
+        if args.value and args.value[0].lower() == "upload":
+            if len(args.value) != 3:
+                print("Usage: python3 run.py crm upload CRM_RECORD_ID FILE_PATH")
+                return 1
+            record_id, file_path = args.value[1], Path(args.value[2])
+            if not file_path.is_file():
+                print(f"File not found: {file_path}")
+                return 1
+            file_record = app.attach_crm_file(record_id, file_path.name, file_path.read_bytes())
+            print(json.dumps(file_record, indent=2, default=str))
+            return 0
+        if args.value and args.value[0].lower() == "files":
+            if len(args.value) != 2:
+                print("Usage: python3 run.py crm files CRM_RECORD_ID")
+                return 1
+            print(json.dumps(app.list_crm_files(args.value[1]), indent=2, default=str))
+            return 0
         if args.value and args.value[0].lower() == "add":
             if len(args.value) < 3:
                 print('Usage: python3 run.py crm add company "Company name"')
                 return 1
             record_type = args.value[1].lower()
-            company = " ".join(args.value[2:])
-            record = app.add_crm_record(company, record_type=record_type)
+            values = args.value[2:]
+            company = " ".join(value for value in values if not value.startswith("--"))
+            record = app.add_crm_record(company, record_type=record_type, phone=args.phone, email=args.email)
             print(json.dumps(record, indent=2, default=str))
             return 0
         records = app.list_crm_records()

@@ -60,6 +60,28 @@ class WorkforceHandler(BaseHTTPRequestHandler):
         if path == "/api/crm":
             self._send_json({"records": app_instance().list_crm_records()})
             return
+        if path.startswith("/api/crm/"):
+            record_id = path.removeprefix("/api/crm/")
+            if record_id.endswith("/files"):
+                record_id = record_id.removesuffix("/files")
+                try:
+                    self._send_json({"files": app_instance().list_crm_files(record_id)})
+                except KeyError as exc:
+                    self._send_json({"status": "failed", "error": str(exc)}, 404)
+                return
+            try:
+                self._send_json({"record": app_instance().crm.get_record(record_id)})
+            except KeyError as exc:
+                self._send_json({"status": "failed", "error": str(exc)}, 404)
+            return
+        if path == "/crm.js":
+            body = (WEB_ROOT / "crm.js").read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/javascript; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if path.startswith("/api/tasks/"):
             task_id = path.removeprefix("/api/tasks/")
             try:
@@ -84,6 +106,12 @@ class WorkforceHandler(BaseHTTPRequestHandler):
             return
         if path == "/api/crm":
             self._handle_crm_record()
+            return
+        if path.startswith("/api/crm/"):
+            if path.endswith("/files"):
+                self._handle_crm_file_upload(path.removeprefix("/api/crm/").removesuffix("/files"))
+                return
+            self._handle_crm_update(path.removeprefix("/api/crm/"))
             return
         if path.startswith("/api/tasks/") and path.endswith("/approve"):
             self._handle_approval(path, approve=True)
@@ -126,14 +154,56 @@ class WorkforceHandler(BaseHTTPRequestHandler):
                 payload.get("company", ""),
                 record_type=str(payload.get("record_type", "company")),
                 contact_name=payload.get("contact_name"),
+                phone=payload.get("phone"),
+                email=payload.get("email"),
                 website=payload.get("website"),
                 industry=payload.get("industry"),
                 location=payload.get("location"),
                 notes=payload.get("notes"),
+                source=str(payload.get("source", "manual entry (unverified)")),
             )
             self._send_json({"status": "created", "record": record}, 201)
         except (ValueError, json.JSONDecodeError) as exc:
             self._send_json({"status": "failed", "error": str(exc)}, 400)
+        except Exception as exc:
+            self._send_json({"status": "failed", "error": str(exc)}, 500)
+
+    def _handle_crm_update(self, record_id: str) -> None:
+        try:
+            payload = self._read_payload()
+            record = app_instance().update_crm_record(record_id, **payload)
+            self._send_json({"status": "updated", "record": record})
+        except (ValueError, json.JSONDecodeError) as exc:
+            self._send_json({"status": "failed", "error": str(exc)}, 400)
+        except KeyError as exc:
+            self._send_json({"status": "failed", "error": str(exc)}, 404)
+        except Exception as exc:
+            self._send_json({"status": "failed", "error": str(exc)}, 500)
+
+    def _handle_crm_file_upload(self, record_id: str) -> None:
+        try:
+            payload = self._read_payload()
+            file_record = app_instance().attach_crm_file_base64(
+                record_id, str(payload.get("filename", "")), str(payload.get("content_base64", ""))
+            )
+            self._send_json({"status": "created", "file": file_record}, 201)
+        except (ValueError, json.JSONDecodeError) as exc:
+            self._send_json({"status": "failed", "error": str(exc)}, 400)
+        except KeyError as exc:
+            self._send_json({"status": "failed", "error": str(exc)}, 404)
+        except Exception as exc:
+            self._send_json({"status": "failed", "error": str(exc)}, 500)
+
+    def do_DELETE(self) -> None:
+        path = urlparse(self.path).path
+        if not path.startswith("/api/crm/"):
+            self.send_error(404)
+            return
+        try:
+            app_instance().delete_crm_record(path.removeprefix("/api/crm/"))
+            self._send_json({"status": "deleted"})
+        except KeyError as exc:
+            self._send_json({"status": "failed", "error": str(exc)}, 404)
         except Exception as exc:
             self._send_json({"status": "failed", "error": str(exc)}, 500)
 
